@@ -1,0 +1,20 @@
+import json
+import urllib3
+
+webhook_url = 'webhook_url_of_your_slack_channel'
+
+def slack_notification(message):
+    try:
+        slack_message = {'text': message}
+        http = urllib3.PoolManager()
+        response = http.request('POST',
+                               webhook_url,
+                               body=json.dumps(slack_message), 
+                               headers={'Content-Type': 'application/json'},
+                               retries=False)
+    except Exception as e:  
+        print(f"Error: {e}")
+        return False
+    return True
+
+slack_notification('Daily stand-up meeting starts at 10:00 AM!')

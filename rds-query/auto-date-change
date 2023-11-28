@@ -1,0 +1,33 @@
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import pandas
+import json
+import boto3
+
+ssm = boto3.client('ssm', region_name ='us-west-1')
+
+# RDS Config
+host = "demo-rds.us-west-1.rds.amazonaws.com"
+username = "pgadmin"
+password = ssm.get_parameter(Name='/demo/rds/postgresql-password', WithDecryption=True)['Parameter']['Value']
+database_name = "mydb"
+port = "5432"
+
+
+conn = psycopg2.connect(
+    host = host,
+    database = database_name,
+    user = username,
+    password = password,
+    port = port
+)
+
+def lambda_handler(event, context):
+    cur = conn.cursor(cursor_factory = RealDictCursor)
+    cur.execute('Delete from DateShift_values')
+    cur.execute("Insert into public.DateShift_values (oldDate , magicDate ) values('2021-01-01','2023-01-01');")
+    cur.execute('select proc_dateshiftmanually();')
+    conn.commit()
+    result = cur.fetchall()
+    print(result)
+    conn.close()

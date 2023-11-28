@@ -3,7 +3,7 @@
 Configure the lambda function inside VPC as DB is generally present in a private subnet.
 
 Attach an IAM role with policy the will allow lambda to execute.
-`AWSLambdaVPCAccessExecutionRole` is the AWS managed ploicy that is required for this role.
+`AWSLambdaVPCAccessExecutionRole` is the AWS managed policy that is required for this role.
 
 From cloud 9 console added a layer with psycopg2 in python folder.
 ```

@@ -2,7 +2,7 @@ import requests
 from requests.auth import HTTPBasicAuth
 import json
 
-url = "provide atlassian.net url"
+url = "https://your-domain.atlassian.net/rest/api/3/project"
 
 API_TOKEN = ""
 

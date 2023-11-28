@@ -1,0 +1,65 @@
+## Auto export of snapshots from multiple regions to AWS S3 bucket every day at a particular time schedule
+import os
+import boto3
+from datetime import datetime
+
+# Create sessions with different regions
+session_ca = boto3.Session(region_name="ca-central-1")
+session_us = boto3.Session(region_name="us-west-1")
+
+snapshots_ca = []
+snapshots_us = []
+
+# Describe snapshots in ca-central-1 region
+response = session_ca.client("rds").describe_db_snapshots(DBInstanceIdentifier="your-db-name", SnapshotType='automated')
+snapshots_ca += response['DBSnapshots']
+while 'Marker' in response:
+    response = session_ca.client("rds").describe_db_snapshots(DBInstanceIdentifier="your-db-name", SnapshotType='automated', Marker=response['Marker'])
+    snapshots_ca += response['DBSnapshots']
+
+# Describe snapshots in us-west-1 region
+response = session_us.client("rds").describe_db_snapshots(DBInstanceIdentifier="test-db-name", SnapshotType='automated')
+snapshots_us += response['DBSnapshots']
+while 'Marker' in response:
+    response = session_us.client("rds").describe_db_snapshots(DBInstanceIdentifier="test-db-name", SnapshotType='automated', Marker=response['Marker'])
+    snapshots_us += response['DBSnapshots']
+
+print(f"Snapshots in us-west-1 region: {snapshots_us}")
+print(f"Number of snapshots in us-west-1 region: {len(snapshots_us)}")
+
+
+# You can sort the list by snapshot creation time to get the latest snapshot
+latest_snapshot_ca = sorted(snapshots_ca, key=lambda x: x['SnapshotCreateTime'])[-1]
+latest_snapshot_us = sorted(snapshots_us, key=lambda x: x['SnapshotCreateTime'])[-1]
+
+dbSnapShotARN_ca = latest_snapshot_ca['DBSnapshotArn']
+dbSnapShotARN_us = latest_snapshot_us['DBSnapshotArn']
+
+today_date = datetime.today().strftime("%Y%m%d")
+
+s3_bucket = "my-db-backups-ca-central-1"
+iam_role = "your role arn"
+kms_key_ca = "your kms_key"
+kms_key_us = " your kms_key"
+
+# Export snapshot in ca-central-1 region
+export_task_ca = "db-snapshot-ca-central"+today_date
+client_ca = session_ca.client('rds')
+response_ca = client_ca.start_export_task(
+    ExportTaskIdentifier=export_task_ca,
+    SourceArn=dbSnapShotARN_ca,
+    S3BucketName=s3_bucket,
+    IamRoleArn=iam_role,
+    KmsKeyId=kms_key_ca
+)
+
+# Export snapshot in us-west-1 region
+export_task_us = "db-snapshot-us-west"+today_date
+client_us = session_us.client('rds')
+response_us = client_us.start_export_task(
+    ExportTaskIdentifier=export_task_us,
+    SourceArn=dbSnapShotARN_us,
+    S3BucketName=s3_bucket,
+    IamRoleArn=iam_role,
+    KmsKeyId=kms_key_us
+)

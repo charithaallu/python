@@ -1,0 +1,71 @@
+## Install flask application 'pip3 intall flask'
+## create a Github webhook with the private IP or DNS name of the EC2 instance where flask app is installed followed by '/createJira:port number'. 
+
+from flask import Flask, request, jsonify
+import requests
+from requests.auth import HTTPBasicAuth
+import json
+
+app = Flask(__name__) #creates flask ec2 instance
+
+@app.route("/createJira", methods=['POST'])
+def createJira():
+    url = "https://your-domain.atlassian.net/rest/api/3/project"
+    
+    API_TOKEN = "your_jira_api_token"
+    
+    auth = HTTPBasicAuth("your_jira_username", API_TOKEN)
+    
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json"
+    }
+
+    data = request.get_json()
+    
+    # Check if the comment contains the /createJira command
+    if '/createJira' in data.get('comment', {}).get('body', ''):
+        payload = json.dumps({
+            "fields": {
+                "description": {
+                    "content": [
+                        {
+                            "content": [
+                                {
+                                    "text": "automate Jira ticket creation",
+                                    "type": "text"
+                                }
+                            ],
+                            "type": "paragraph"
+                        }
+                    ],
+                    "type": "doc",
+                    "version": 1
+                },
+                "project": {
+                    "key": "provide projectkey name"
+                },
+                "issuetype": {
+                    "id": "provide issue id"
+                },
+                "summary": "automate Jira ticket creation",
+            },
+            "update": {}
+        })
+
+        response = requests.post(
+            url,
+            data=payload,
+            headers=headers,
+            auth=auth
+        )
+        
+        return jsonify(json.loads(response.text)), response.status_code
+
+    else:
+        print("Comment does not contain the /createJira command")
+        return jsonify({"status": "Command not recognized"}), 400
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000) # starts the Flask web server
+
